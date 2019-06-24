@@ -4,81 +4,81 @@ import org.apache.spark.SparkContext
 
 // TPC-H table schemas
 case class Customer(
-  c_custkey: Long,
-  c_name: String,
-  c_address: String,
-  c_nationkey: Long,
-  c_phone: String,
-  c_acctbal: Double,
-  c_mktsegment: String,
-  c_comment: String)
+  custkey: Long,
+  name: String,
+  address: String,
+  nationkey: Long,
+  phone: String,
+  acctbal: Double,
+  mktsegment: String,
+  comment: String)
 
 case class Lineitem(
-  l_orderkey: Long,
-  l_partkey: Long,
-  l_suppkey: Long,
-  l_linenumber: Long,
-  l_quantity: Double,
-  l_extendedprice: Double,
-  l_discount: Double,
-  l_tax: Double,
-  l_returnflag: String,
-  l_linestatus: String,
-  l_shipdate: String,
-  l_commitdate: String,
-  l_receiptdate: String,
-  l_shipinstruct: String,
-  l_shipmode: String,
-  l_comment: String)
+  orderkey: Long,
+  partkey: Long,
+  suppkey: Long,
+  linenumber: Long,
+  quantity: Double,
+  extendedprice: Double,
+  discount: Double,
+  tax: Double,
+  returnflag: String,
+  linestatus: String,
+  shipdate: String,
+  commitdate: String,
+  receiptdate: String,
+  shipinstruct: String,
+  shipmode: String,
+  comment: String)
 
 case class Nation(
-  n_nationkey: Long,
-  n_name: String,
-  n_regionkey: Long,
-  n_comment: String)
+  nationkey: Long,
+  name: String,
+  regionkey: Long,
+  comment: String)
 
 case class Order(
-  o_orderkey: Long,
-  o_custkey: Long,
-  o_orderstatus: String,
-  o_totalprice: Double,
-  o_orderdate: String,
-  o_orderpriority: String,
-  o_clerk: String,
-  o_shippriority: Long,
-  o_comment: String)
+  orderkey: Long,
+  custkey: Long,
+  ordertatus: String,
+  totalprice: Double,
+  orderdate: String,
+  orderpriority: String,
+  clerk: String,
+  shippriority: Long,
+  comment: String)
 
 case class Part(
-  p_partkey: Long,
-  p_name: String,
-  p_mfgr: String,
-  p_brand: String,
-  p_type: String,
-  p_size: Long,
-  p_container: String,
-  p_retailprice: Double,
-  p_comment: String)
+  partkey: Long,
+  name: String,
+  mfgr: String,
+  brand: String,
+  xtype: String,
+  size: Long,
+  container: String,
+  retailprice: Double,
+  comment: String)
 
 case class Partsupp(
-  ps_partkey: Long,
-  ps_suppkey: Long,
-  ps_availqty: Long,
-  ps_supplycost: Double,
-  ps_comment: String)
+  partkey: Long,
+  suppkey: Long,
+  availqty: Long,
+  supplycost: Double,
+  comment: String)
 
 case class Region(
-  r_regionkey: Long,
-  r_name: String,
-  r_comment: String)
+  regionkey: Long,
+  name: String,
+  comment: String)
 
 case class Supplier(
-  s_suppkey: Long,
-  s_name: String,
-  s_address: String,
-  s_nationkey: Long,
-  s_phone: String,
-  s_acctbal: Double,
-  s_comment: String)
+  suppkey: Long,
+  name: String,
+  address: String,
+  nationkey: Long,
+  phone: String,
+  acctbal: Double,
+  comment: String)
 
 class TpchSchemaProvider(sc: SparkContext, inputDir: String) {
 
@@ -99,7 +99,7 @@ class TpchSchemaProvider(sc: SparkContext, inputDir: String) {
     "region" -> sc.textFile(inputDir + "/region.tbl*").map(_.split('|')).map(p =>
       Region(p(0).trim.toLong, p(1).trim, p(2).trim)).toDF(),
 
-    "order" -> sc.textFile(inputDir + "/orders.tbl*").map(_.split('|')).map(p =>
+    "order" -> sc.textFile(inputDir + "/order.tbl*").map(_.split('|')).map(p =>
       Order(p(0).trim.toLong, p(1).trim.toLong, p(2).trim, p(3).trim.toDouble, p(4).trim, p(5).trim, p(6).trim, p(7).trim.toLong, p(8).trim)).toDF(),
 
     "part" -> sc.textFile(inputDir + "/part.tbl*").map(_.split('|')).map(p =>

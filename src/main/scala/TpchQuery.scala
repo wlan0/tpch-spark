@@ -16,7 +16,7 @@ import scala.collection.mutable.ListBuffer
  * Savvas Savvides <savvas@purdue.edu>
  *
  */
-abstract class TpchQuery {
+abstract class TpchQuery(lineitem: DataFrame, customer: DataFrame, order: DataFrame, part: DataFrame, partsupp: DataFrame, nation: DataFrame, region: DataFrame, supplier: DataFrame) {
 
   // get the name of the class excluding dollar signs and package
   private def escapeClassName(className: String): String = {
@@ -28,7 +28,7 @@ abstract class TpchQuery {
   /**
    *  implemented in children classes and hold the actual query
    */
-  def execute(sc: SparkContext, tpchSchemaProvider: TpchSchemaProvider): DataFrame
+  def execute(sc: SparkContext): DataFrame
 }
 
 object TpchQuery {
@@ -42,11 +42,11 @@ object TpchQuery {
       df.write.mode("overwrite").format("com.databricks.spark.csv").option("header", "true").save(outputDir + "/" + className)
   }
 
-  def executeQueries(sc: SparkContext, schemaProvider: TpchSchemaProvider, queryNum: Int): ListBuffer[(String, Float)] = {
+  def executeQueries(sc: SparkContext, queryNum: Int): ListBuffer[(String, Float)] = {
 
     // if set write results to hdfs, if null write to stdout
     // val OUTPUT_DIR: String = "/tpch"
-    val OUTPUT_DIR: String = "file://" + new File(".").getAbsolutePath() + "/dbgen/output"
+    val OUTPUT_DIR: String = "s3a://xxxxxx/results/" + new File(".").getAbsolutePath() + "/dbgen/output"
 
     val results = new ListBuffer[(String, Float)]
 
@@ -56,13 +56,26 @@ object TpchQuery {
       fromNum = queryNum;
       toNum = queryNum;
     }
+    
+    val spark = SparkSession.builder.getOrCreate()
 
+    val lineitem = spark.read.orc("s3a://xxxxxx/lineitem/")
+    val customer = spark.read.orc("s3a://xxxxxx/customer/")
+    val order = spark.read.orc("s3a://xxxxxx/orders/")
+    val part = spark.read.orc("s3a://xxxxxx/part/")
+    val partsupp = spark.read.orc("s3a://xxxxxx/partsupp/")
+    val nation = spark.read.orc("s3a://xxxxxx/nation/")
+    val region = spark.read.orc("s3a://xxxxxx/region/")
+    val supplier = spark.read.orc("s3a://xxxxxx/supplier/")
+
+    val args = Array[AnyRef](lineitem, customer, order, part, partsupp, nation, region, supplier)
+    
     for (queryNo <- fromNum to toNum) {
       val t0 = System.nanoTime()
 
-      val query = Class.forName(f"main.scala.Q${queryNo}%02d").newInstance.asInstanceOf[TpchQuery]
+      val query = Class.forName(f"main.scala.Q${queryNo}%02d").getDeclaredConstructor(classOf[DataFrame], classOf[DataFrame], classOf[DataFrame], classOf[DataFrame], classOf[DataFrame], classOf[DataFrame], classOf[DataFrame], classOf[DataFrame]).newInstance(args:_*).asInstanceOf[TpchQuery]
 
-      outputDF(query.execute(sc, schemaProvider), OUTPUT_DIR, query.getName())
+      outputDF(query.execute(sc), OUTPUT_DIR, query.getName())
 
       val t1 = System.nanoTime()
 
@@ -80,21 +93,21 @@ object TpchQuery {
     if (args.length > 0)
       queryNum = args(0).toInt
 
-    val conf = new SparkConf().setAppName("Simple Application")
+    val conf = new SparkConf().setAppName("Spark TPC-H benchmark")
     val sc = new SparkContext(conf)
 
     // read files from local FS
-    val INPUT_DIR = "file://" + new File(".").getAbsolutePath() + "/dbgen"
+    val INPUT_DIR = "s3a://xxxxxx/"
 
     // read from hdfs
     // val INPUT_DIR: String = "/dbgen"
 
-    val schemaProvider = new TpchSchemaProvider(sc, INPUT_DIR)
+    //val schemaProvider = new TpchSchemaProvider(sc, INPUT_DIR)
 
     val output = new ListBuffer[(String, Float)]
-    output ++= executeQueries(sc, schemaProvider, queryNum)
+    output ++= executeQueries(sc, queryNum)
 
-    val outFile = new File("TIMES.txt")
+    val outFile = new File("s3a://xxxxx/results/TIMES.txt")
     val bw = new BufferedWriter(new FileWriter(outFile, true))
 
     output.foreach {

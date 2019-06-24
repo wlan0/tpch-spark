@@ -10,22 +10,46 @@ import org.apache.spark.sql.functions.udf
  * Savvas Savvides <savvas@purdue.edu>
  *
  */
-class Q10 extends TpchQuery {
+class Q10(lineitem: DataFrame, customer: DataFrame, order: DataFrame, part: DataFrame, partsupp: DataFrame, nation: DataFrame, region: DataFrame, supplier: DataFrame) extends TpchQuery(lineitem, customer, order, part, partsupp, nation, region, supplier) {
 
-  override def execute(sc: SparkContext, schemaProvider: TpchSchemaProvider): DataFrame = {
+  override def execute(sc: SparkContext): DataFrame = {
 
     // this is used to implicitly convert an RDD to a DataFrame.
     val sqlContext = new org.apache.spark.sql.SQLContext(sc)
     import sqlContext.implicits._
-    import schemaProvider._
+    
+    val n_nation_cols = nation.columns.map(c=> nation(c).as(s"n_$c"))
+    val n_nation = nation.select(n_nation_cols: _*)
+
+    val r_region_cols = region.columns.map(c=> region(c).as(s"r_$c"))
+    val r_region = region.select(r_region_cols: _*)
+
+    val s_supplier_cols = supplier.columns.map(c=> supplier(c).as(s"s_$c"))
+    val s_supplier = supplier.select(s_supplier_cols: _*)
+
+    val p_part_cols = part.columns.map(c=> part(c).as(s"p_$c"))
+    val p_part = part.select(p_part_cols: _*)
+
+    val ps_partsupp_cols = partsupp.columns.map(c=> partsupp(c).as(s"ps_$c"))
+    val ps_partsupp = partsupp.select(ps_partsupp_cols: _*)
+  
+    val l_lineitem_cols = lineitem.columns.map(c=> lineitem(c).as(s"l_$c"))
+    val l_lineitem = lineitem.select(l_lineitem_cols: _*)
+
+    val c_customer_cols = customer.columns.map(c=> customer(c).as(s"c_$c"))
+    val c_customer = customer.select(c_customer_cols: _*)
+
+    val o_order_cols = order.columns.map(c=> order(c).as(s"o_$c"))
+    val o_order = order.select(o_order_cols: _*)
+
 
     val decrease = udf { (x: Double, y: Double) => x * (1 - y) }
 
-    val flineitem = lineitem.filter($"l_returnflag" === "R")
+    val flineitem = l_lineitem.filter($"l_returnflag" === "R")
 
-    order.filter($"o_orderdate" < "1994-01-01" && $"o_orderdate" >= "1993-10-01")
-      .join(customer, $"o_custkey" === customer("c_custkey"))
-      .join(nation, $"c_nationkey" === nation("n_nationkey"))
+    o_order.filter($"o_orderdate" < "1994-01-01" && $"o_orderdate" >= "1993-10-01")
+      .join(c_customer, $"o_custkey" === c_customer("c_custkey"))
+      .join(n_nation, $"c_nationkey" === n_nation("n_nationkey"))
       .join(flineitem, $"o_orderkey" === flineitem("l_orderkey"))
       .select($"c_custkey", $"c_name",
         decrease($"l_extendedprice", $"l_discount").as("volume"),
